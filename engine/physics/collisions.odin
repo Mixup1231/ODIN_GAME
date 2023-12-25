@@ -1,40 +1,47 @@
 package physics 
+import sp "../spatial"
+import mm "../mars_math"
+
 import "core:math"
 import "core:fmt"
 
+CollisionLayer :: bit_set[0..<32]
+
 StaticBody :: struct {
-    using aabb: AABB
+    layer: CollisionLayer,
+    using aabb: sp.AABB
 }
 
 DynamicBody :: struct {
-    using aabb: AABB,
-    acceleration: Vec2f,
-    velocity: Vec2f,
-    boundsCheck: AABB,
+    layer: CollisionLayer,
+    using aabb: sp.AABB,
+    acceleration: mm.Vec2f,
+    velocity: mm.Vec2f,
+    boundsCheck: sp.AABB,
     isColliding: bool
 }
 
 Ray :: struct {
-    origin: Vec2f,
-    direction: Vec2f
+    origin: mm.Vec2f,
+    direction: mm.Vec2f
 }
 
 RayIntersect :: struct {
-    position: Vec2f,
-    normal: Vec2f,
+    position: mm.Vec2f,
+    normal: mm.Vec2f,
     time: f32
 }
 
-rayInAabb :: proc(ray: Ray, aabb: AABB) -> (
+rayInAabb :: proc(ray: Ray, aabb: sp.AABB) -> (
     result: bool = false, intersect: RayIntersect
 ) {
     swap :: proc(x: $T, y: T) -> (T, T) {
         return y, x
     }
     
-    invDir: Vec2f = 1 / ray.direction
-    near: Vec2f = (aabb.position - ray.origin) * invDir
-    far: Vec2f = (aabb.position + aabb.size - ray.origin) * invDir
+    invDir: mm.Vec2f = 1 / ray.direction
+    near: mm.Vec2f = (aabb.position - ray.origin) * invDir
+    far: mm.Vec2f = (aabb.position + aabb.size - ray.origin) * invDir
 
     if math.is_nan(far[1]) || math.is_nan(far[0]) {
         return
@@ -84,7 +91,7 @@ rayInAabb :: proc(ray: Ray, aabb: AABB) -> (
     return
 }
 
-bodyInBody :: proc(a: DynamicBody, b: AABB) -> (
+bodyInBody :: proc(a: DynamicBody, b: sp.AABB) -> (
     result: bool, intersect: RayIntersect
 ) {
     if a.velocity == {0, 0} {
@@ -95,7 +102,7 @@ bodyInBody :: proc(a: DynamicBody, b: AABB) -> (
     ray.origin = a.position + a.size / 2
     ray.direction = a.velocity
 
-    target: AABB = aabbSum(a, b)
+    target: sp.AABB = sp.aabbSum(a, b)
     result, intersect = rayInAabb(ray, target)
     return
 }
@@ -105,10 +112,10 @@ resolveBodyCollision :: proc(
 ) {
     assert(dynamicBody != nil)
 
-    absVel: Vec2f = {math.abs(velocity[0]), math.abs(velocity[1])}
-    newVel: Vec2f = velocity + intersect.normal * absVel * (1 - intersect.time)
-    mag: f32 = vecMag(newVel - velocity)
-    if mag > vecMag(velocity) * 2 {
+    absVel: mm.Vec2f = {math.abs(velocity[0]), math.abs(velocity[1])}
+    newVel: mm.Vec2f = velocity + intersect.normal * absVel * (1 - intersect.time)
+    mag: f32 = mm.vecMag(newVel - velocity)
+    if mag > mm.vecMag(velocity) * 2 {
         return
     } else {
         velocity = newVel
